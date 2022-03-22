@@ -1,242 +1,149 @@
+from email import header
+from itertools import count
+from sqlite3 import Row
+from openpyxl import Workbook, load_workbook
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Font
 import datetime
 from datetime import datetime as dt
-import csv
 
 
-################
-# Musst learn either pickle or csv in order to continue, Feb 19, 2022
-# Idea: end product would be a program that generates a .csv file with daily student list organized by belt and then subcatorigized by priority rating
-# .csv file would then possibly be exported to google sheets or microsoft excel.
-# Either learn how to make a weak api or stick to console operation. Cannot do both
-
-student_list = []
 
 
-#insert a preset futuredate into class __init__
-time_change = datetime.timedelta(weeks= 8)
-belt_map = {0:"No", 1:"White", 2:"Yellow", 3:"Orange", 4:"Green", 5:"Blue", 6:"Purple", 7:"Brown", 8:"Red", 9:"Black Stripe"}
+
+data = {
+    "Jordan":{
+        "Last Name": "Senko",
+        "Belt": "Red",
+        "Last Test Date": "1 Jan, 2022",
+        "Next Test Date": "1 Apr, 2022",
+        "First Class": "Mon 6:15PM",
+        "Second Class": "Tue 7:45PM",
+        "Third Class": "Wed 5:45PM"
+    },
+    "Nikki":{
+         "Last Name": "Bush",
+        "Belt": "Red",
+        "Last Test Date": "1 Jan, 2022",
+        "Next Test Date": "1 Apr, 2022",
+        "First Class": "Mon 6:15PM",
+        "Second Class": "Tue 7:45PM",
+        "Third Class": "Wed 5:45PM"
+    },
+    "Mark":{
+         "Last Name": "Bush",
+        "Belt": "Green",
+        "Last Test Date": "1 Jan, 2022",
+        "Next Test Date": "1 Apr, 2022",
+        "First Class": "Mon 6:15PM",
+        "Second Class": "Tue 7:45PM",
+        "Third Class": "Wed 5:45PM"
+    }
+}
+
+#wb = Workbook()
+#ws = wb.active
+#ws.title = "Data"
+
+#headings = ["Name"] + list(data["Jordan"].keys())
+#ws.append(headings)
+
+#for person in data:
+    #points = list(data[person].values())
+    #ws.append([person] + points)
 
 
-# 1 --------- Student class
-class Student:
+
+#wb.save("Student_Data.xlsx")
+
+#print(ws.max_row)
+#print(ws.max_column)
+
+
+
+def check_testing(future_test_date):
+    global priority
+    priority_rating_raw = dt.strptime(future_test_date, "%d %b, %Y") - dt.now() 
+    priority_string = str(priority_rating_raw)
+    pr = int(priority_string[0:3]) #pr = priority_rating
+    if 40< pr <=60:
+        priority = "C"
+    elif 20< pr <=40:
+        priority = "B"
+    elif 0< pr <=20:
+        priority = "A"
     
-    def __init__(self, first_name, last_name, belt, last_test_date, future_test_date, class_1, class_2 = "Mon 1:00AM", class_3 = "Mon 1:00AM"):
-        self.first_name = first_name
-        self.last_name = last_name
-        self.username = last_name + first_name[0]
-        self.belt = belt
-        self.last_test_date = dt.strptime(last_test_date, "%d %b, %Y") # 1 Jan, 2022
-        self.future_test_date = dt.strptime(future_test_date, "%d %b, %Y")
-        self.class_1 = class_1 # Format: "%a %I:%M%p" == "Tue 6:15AM"
-        self.class_2 = class_2 
-        self.class_3 = class_3
-        #A = 0-20 days till testing, B = 21-40 days till testing, C = 41-60 days till testing.
-        self.priority = ""
+
+
+def create_student():
+    first_name = input("Enter First Name: ")
+    last_name = input("Enter Last Name: ")
+    belt = input("Enter Belt Rank: ")
+    last_test_date = input("Enter Last Test Date (1 Jan, 2022): ")
+    future_test_date = input("Enter Next Test Date (1 Apr, 2022): ")
+    first_class = input("Enter 1st Class (Mon 3:45PM): ")
+    second_class = input("Enter 2nd Class (Mon 3:45PM): ")
+    third_class = input("Enter 3rd Class (Mon 3:45PM): ")
+    check_testing(future_test_date)
+
+    temp_dict = {
+        first_name:{
+            "Last Name" : last_name,
+            "Belt" : belt,
+            "Priority" : priority,
+            "Last Test Date" : last_test_date,
+            "Future Test Date" : future_test_date,
+            "First Class" : first_class,
+            "Second Class" : second_class,
+            "Third Class" : third_class
+            }
+    }
+
+    wb = load_workbook("Student_Data.xlsx")
+    ws = wb.active
+
+    for person in temp_dict:
+        points = list(temp_dict[person].values())
+        ws.append([person] + points)
     
-    def check_testing(self):
-        for student in student_list:
-            priority_rating_raw =  self.future_test_date - dt.now() 
-            priority_string = str(priority_rating_raw)
-            pr = int(priority_string[0:3]) #pr = priority_rating
-            if 40< pr <=60:
-                self.priority = "C"
-            elif 20< pr <=40:
-                self.priority = "B"
-            elif 0< pr <=20:
-                self.priority = "A"
+    wb.save("Student_Data.xlsx")
 
-# 2 --------- Instructor class
-class Inst:
-    def __init__(self, first_name, last_name, username, password):
-        self.first_name = first_name
-        self.last_name = last_name
-        self.username = username
-        self.password = password
 
-    def check_list(self, first_name, last_name):  
-        for i in range(len(student_list)):
-            for student in student_list:
-                if first_name == student.first_name:
-                    if last_name == student.last_name:
-                        return False
+
+
+
+def display_student(row_value):
+    wb = load_workbook("Student_Data.xlsx")
+    ws = wb.active
+    count = 1
+    header_dict = {1 : "First Name: ", 2 : "Last Name: ", 3 : "Belt Rank: ", 4 : "Last Test Date: ", 5 : "Next Test Date: ", 6 : "First Class: ", 7 : "Second Class: ", 8 : "Third Class: "}
+
+    student_row_index = list(ws.rows)[row_value]
+    for data in student_row_index:
+        print(header_dict[count] + data.value)
+        count += 1
+    wb.save("Student_Data.xlsx")
+    
+
+def view_student():
+    found = False
+    wb = load_workbook("Student_Data.xlsx")
+    ws = wb.active
+
+    x = input("Input Name (Jordan Senko): ")
+    f, l = x.split(" ")
+    
+    for row in range(2, ws.max_row + 1):
+        first_name = ws["A" + str(row)].value
+        if first_name == f:
+            for row2 in range(2, ws.max_row + 1):
+                    last_name_cell = ws["B" + str(row2)].value
+                    if last_name_cell == l:
+                        display_student(row - 1)
                         break
-                    else:
-                        pass
-                else:
-                    pass
-            return True
+    wb.save("Student_Data.xlsx")
             
-    def create_student(self):
-        first_name = input("First name: ")
-        last_name = input("Last name: ")
-        if self.check_list(first_name, last_name) == True:
-            belt = input("Belt rank: ")
-            print("Ensure dates are entered in the following form: 1 Jan, 2022")
-            last_test_date = input("Input Last Testing Date: ")
-            future_test_date = input("Input Next Testing Date: ")
-            class_1 = input("First class of the week (Tue 3:15PM): ")
-            class_2 = input("Second class of the week (Sat 9:00AM). If none, press enter: ")
-            class_3 = input("Third class off the week (Mon 6:00PM). If none, press eneter: ")
-            student = Student(first_name, last_name, belt, last_test_date, future_test_date, class_1, class_2, class_3)
-            student_list.append(student)
-            file = open("student_dict.txt", "a")
-            file.write("\n" + first_name + "|" + last_name + "|" + belt + "|" + last_test_date + "|" + future_test_date + "|" + class_1 + "|" + class_2 + "|" + class_3)
-            file.close()
-            print("{name} has sucessfully been added to the program".format(name = student.first_name))
-        else:
-            print("Student already exists.")
-
-    def delete_student(self):
-        first_name = input("First Name: ")
-        last_name = input("Last Name: ")
-        for student in student_list:
-            if first_name == student.first_name:
-                if last_name == student.last_name:
-                    prompt = input("Are you sure you want to delete {name}'s data? (Y?N): ".format(name = student.first_name))
-                    if prompt == "Y":
-                        print("{name} has been removed.".format(name = student.first_name))
-                        student_list.remove(student)
-                    else:
-                        print("Student does not exist.")
-                        break
-                else:
-                    print("Student does not exist.")
-                    pass
-            else:
-                print("Student does not exist.")
-                pass
             
 
-    
-jordan = Student("Jordan", "Senko", "Red", "1 Jan, 2022", "1 Apr, 2022", "Tue 3:15pm")    
-
-student_list = [jordan]
-        
-
-
-
-        
-def main(inst):
-    run = True
-    while run == True:
-        print(" ")
-        print("--- MAIN PAGE --- {}".format(inst.username))
-        print("""
-        Ledger:
-        CS = Create Student
-        DS = Delete Student
-        LO = Log Out
-        """)
-        x = input("Input Command: ")
-        if x == "CS":
-            run == False
-            inst.create_student()
-        elif x == "DS":
-            run == False
-            inst.delete_student()
-        elif x == "CU":
-            for instructor in instructor_list:
-                print(instructor.username)
-                print(instructor.password)
-        elif x == "LO":
-            quit()
-
-
-def login():
-    success = False
-    #file = open("user_details.txt", "r")
-    #for i in file:
-        #a, b = i.split(",")
-        #b = b.strip()
-        #if (a==name and b == password):
-            #success = True
-            #break
-    #file.close()
-    username = input("Username: ")
-    password = input("Password: ")
-    index = 0
-    for i in range(len(instructor_list)):
-        index += 1
-        for instructor in instructor_list:
-            if instructor.username == username:
-                if instructor.password == password:
-                    success == True
-                    break
-
-    if success == True:
-        print("Login Successful!")
-        main(instructor_list[index-1])
-    else:
-        print("Incorrect login info")
-        login()
-
-
-def register():
-    print(" ")
-    username = input("Username: ")
-    password = input("Password: ")
-    first_name = input("First name: ")
-    last_name = input("Last name: ")
-    #file = open("user_details.txt", "a")
-    #file.write("\n" + name + ", " + password)
-    #file.close()
-    instructor = Inst(first_name, last_name, username, password)
-    instructor_list.append(instructor)
-    welcoming_phrase = "{name} has been registered as an Instructor".format(name = first_name + "." + last_name[0])
-    print(" ")
-    print(welcoming_phrase)
-    main(instructor)
-instructor_list = []
-
-def access(option):
-    global name
-    if (option == "login"):
-        name = input("Enter your name: ")
-        password = input("Enter your password: ")
-        login(name, password)
-    else:
-        print("Enter your name and password to register")
-        name = input("Enter your name: ")
-        password = input("Enter your password: ")
-        register(name, password)
-
-
-def begin():
-    global option
-    print("--- Login/Register Page ---")
-    option = input("Login or Register (log / reg): ")
-    if option == "log":
-        login()
-    elif option == "reg":
-        register()
-    else:
-        begin()
-
-begin()
-#access(option)
-
-
-
-
-
-
-
-
-            
-
-    
-
-
-# wants to be able to see the students in classes that day sorted by their belt, and priority. 
-
-# look into and learn CSV
-
-
-
-
-
-
-#student.check_testing()
-#print(student.priority)
-
-
+#view_student()
+create_student()
