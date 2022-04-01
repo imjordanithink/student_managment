@@ -452,10 +452,49 @@ def wb_data_compiler():
 
 #print(ws.max_row)
 #print(ws.max_column)
+
+def delete_student(row_value = 0, deleting = False):
+    # allows the function to be called without having a row_value in
+    if row_value == 0 and deleting == False:
+        view_student(True)
+    elif deleting == True:
+        x = input("Are you sure you want to delete this profile?(y/n): ")
+        if x == "y":
+            wb = load_workbook("student_data.xlsx")
+            ws = wb.active
+
+            ws.delete_rows(row_value + 1)
+
+            for row in range(2, ws.max_row + 1):
+                if ws["A" + str(row)] == None:
+                    starting_cell = "A" + str(row + 1)
+                    ending_cell = "H" + str(ws.max_row)
+                    moving_range = starting_cell + ":" + ending_cell
+                    ws.move_range(moving_range, rows = -1)
+
+            wb.save("student_data.xlsx")
+            print("\nSuccess!\n")
+            display()
+
+        
+
+
+           
+    
+
+    #if x == "y":
+        
+        #wb = load_workbook("student_data.xlsx")
+        #ws = wb.active
+
+        
+        
+
 def update_priority_ratings():
     wb = load_workbook("Student_Data.xlsx")
     ws = wb.active
 
+    # from 
     for row in range(2, ws.max_row + 1):
         future_test_date = ws["F" + str(row)].value # "F" is Future Test Date column
         check_testing(future_test_date)
@@ -464,21 +503,31 @@ def update_priority_ratings():
     wb.save("Student_Data.xlsx")
 
 def check_testing(future_test_date):
-    global priority
-    
+    def ranking(day):
+        pr = int(day) #pr = priority_rating
+        global priority
+        if pr > 61:
+            priority = "D"
+        elif 40< pr <=60:
+            priority = "C"
+        elif 20< pr <=40:
+            priority = "B"
+        elif 0< pr <=20:
+            priority = "A"
+
     priority_rating_raw = dt.strptime(future_test_date, "%d %b, %Y") - dt.now() 
-    priority_string = str(priority_rating_raw)
-    priority_string.replace("days,", "    ")
-    pr_string = priority_string.split(" ")[0]
-    pr = int(pr_string[0:3]) #pr = priority_rating
-    if pr > 61:
-        priority = "D"
-    elif 40< pr <=60:
-        priority = "C"
-    elif 20< pr <=40:
-        priority = "B"
-    elif 0< pr <=20:
-        priority = "A"
+    delta_list = str(priority_rating_raw).split(":")
+    day_raw = delta_list[0]
+
+    if "days" in day_raw:
+        day = day_raw.split(" ")
+        ranking(day[0])
+    else:
+        ranking(day_raw)
+    
+    
+        
+    
 
 # --------------Regular Expressions Legend--------------
 # CTRL + F = Search and replace bar
@@ -582,13 +631,18 @@ def create_student():
     print("\n{} {} has been added to the data sheet.\n".format(first_name, last_name))
     display()
 
-def display_student(row_value):
+def fetch_student_info(row_value, deleting = False):
+    
     wb = load_workbook("Student_Data.xlsx")
     ws = wb.active
     count = 1
     header_dict = {1 : "First Name: ", 2 : "Last Name: ", 3 : "Belt Rank: ", 4 : "Priority Rating: ", 5 : "Last Test Date: ", 6 : "Next Test Date: ", 7 : "First Class: ", 8 : "Second Class: "}
 
     student_row_index = list(ws.rows)[row_value]
+
+    print("""
+    ------- Student Profile -------
+    """)
   
     for data in student_row_index:
         if count == 9:
@@ -599,26 +653,45 @@ def display_student(row_value):
         else:
             print(header_dict[count] + data.value)
             count += 1
+    print(" ")
     wb.save("Student_Data.xlsx")
-    display()
+
+    if deleting == True:
+        delete_student(row_value, True)
+        deleting = False
+    elif deleting == False:
+        display()
+    
+    
           
-def view_student():
+def view_student(deleting = False):
     wb = load_workbook("Student_Data.xlsx")
     ws = wb.active
 
-    x = input("Input Name (First Last): ")
+    x = input("\nEnter Student Name (First Last): ")
     f, l = x.split(" ")
     
     for row in range(2, ws.max_row + 1):
-        first_name = ws["A" + str(row)].value
-        if first_name == f:
+        first_name_raw = ws["A" + str(row)].value
+        if first_name_raw == f:
+            first_name = first_name_raw
             for row2 in range(2, ws.max_row + 1):
-                    last_name_cell = ws["B" + str(row2)].value
-                    if last_name_cell == l:
-                        display_student(row - 1)
-                        break
+                    last_name = ws["B" + str(row2)].value
+                    if first_name + last_name == f+l and row == row2:
+                        if deleting == True:
+                            fetch_student_info(row - 1, True)
+                            break
+                        else:
+                            fetch_student_info(row - 1)
+                            break
+                    else:
+                        continue
+    deleting = False
+                    
     wb.save("Student_Data.xlsx")
 
+
+global display
 def display():
     print("""
     ------ Student Management ------
@@ -626,6 +699,7 @@ def display():
         vs = View Student Info
         vd = View the Day
         cs = Create Student Profile
+        ds = Delete Student Profile
 
     --------------------------------
 
@@ -637,6 +711,8 @@ def display():
         create_student()
     elif x == "vd":
         wb_data_compiler()
+    elif x == "ds":
+        delete_student()
 
 update_priority_ratings()       
 display()
